@@ -1,80 +1,109 @@
 import spidev
 
-CHANNEL_BYTES = {
-    0: 0x80,
-    1: 0xC0,
-    2: 0x90,
-    3: 0xD0,
-    4: 0xA0,
-    5: 0xE0,
-    6: 0xB0,
-    7: 0xF0
-}
-START_BYTE = 0x01
-PADDING_BYTE = 0x00
-HEX_SCALE = 16
-BINARY_SCALE = 8
-BYTE_MAX = 256
+class TLC0838Reading():
+    def __init__(self, binary_string, vref):
+        self.binary_string = binary_string
+        self.vref = vref
+
+        # Figure out all the conversions here
+        msbf_bin = self.binary_string[9:17]
+        lsbf_bin = self.binary_string[16:]
+
+        msbf_int = int(msbf_bin, 2)
+        lsbf_int = int(lsbf_bin, 2)
+
+        msbf_hex = hex(msbf_int)
+        lsbf_hex = hex(lsbf_int)
+
+        msbf_vcc = (float(msbf_int) / 255.0 * self.vref)
+        lsbf_vcc = (float(lsbf_int) / 255.0 * self.vref)
+
+        self.msbf = {
+            'bin': msbf_bin,
+            'int': msbf_int,
+            'hex': msbf_hex,
+            'vcc': msbf_vcc
+        }
+
+        self.lsbf = {
+            'bin': lsbf_bin,
+            'int': lsbf_int,
+            'hex': lsbf_hex,
+            'vcc': lsbf_vcc
+        }
 
 class TLC0838():
-    def __init__(self, bus=0, ce=0, voltage=5.0):
+    # Single Channel Address
+    SCADDR = {
+        0: 0x08,
+        1: 0x0C,
+        2: 0x09,
+        3: 0x0D,
+        4: 0x0A,
+        5: 0x0E,
+        6: 0x0B,
+        7: 0x0F
+    }
+
+    # Differential Channel Address
+    DCADDR = {
+        0: 0x00,
+        1: 0x04,
+        2: 0x01,
+        3: 0x05,
+        4: 0x02,
+        5: 0x06,
+        6: 0x03,
+        7: 0x07
+    }
+
+    # Constants
+    PADDING_BYTE = 0x00
+    START_BYTE = 0x10
+
+    # SPI Interface Constants
+    SPI_SPEED = 250000
+    SPI_DELAY = 440
+
+    def __init__(self, bus, ce, vref=5.0):
         self.bus = bus
         self.ce = ce
-        self.voltage = voltage
+        self.vref = vref
 
-        try:
-            self.spi = spidev.SpiDev()
-            self.spi.open(bus, ce)
-        except Exception as e:
-            print "Could Not Open SPI(%s, %s)" % (bus, ce)
-            raise
+        # Initialize SPI
+        self.spi = spidev.SpiDev()
+        self.spi.open(bus, ce)
 
     def close(self):
         self.spi.close()
 
-    def read_all(self):
-        SPEED = 250000
-        DELAY = 440
-        data = {}
-        for ch_key in CHANNEL_BYTES.keys():
-            instruction = [START_BYTE, CHANNEL_BYTES[ch_key], PADDING_BYTE]
-            response = self.spi.xfer2(instruction, SPEED, DELAY)
+    def read(self, channel, differential=False):
+        inst = self._make_instruction(channel, differential=differential)
+        resp = self.spi.xfer2(inst, TLC0838.SPI_SPEED, TLC0838.SPI_DELAY)
 
-            # Convert response to binary
-            bin_str = ""
-            for idx in range(0, len(response)):
-                bin_str += bin(
-                    int(str(response[idx]), HEX_SCALE)
-                )[2:].zfill(BINARY_SCALE)
+        # Combine response into single binary string
+        binary_string = ''
+        for byte in resp:
+            binary_string += self._byte2bin(byte)
 
-            # Our data resides within the 13th to the 21st bit
-            binary_raw = bin_str[13:21]
-            decimal_raw = int(binary_raw, 2)
-            hex_raw = hex(decimal_raw)
+        result = TLC0838Reading(binary_string, self.vref)
+        return result
 
-            # Get Voltage
-            voltage = (float(decimal_raw) / float(BYTE_MAX) * self.voltage)
+    def _make_instruction(self, channel, differential=False):
+        # Figure out if we want single channel or differential channel
+        addrs = TLC0838.SCADDR if not differential else TLC0838.DCADDR
+        # Combine start byte with channel byte
+        addr_byte = TLC0838.START_BYTE | addrs[channel]
+        # Return instruction, start/channel byte plus 2 padding bytes
+        return [addr_byte, TLC0838.PADDING_BYTE, TLC0838.PADDING_BYTE]
 
-            data[ch_key] = {
-                'raw': {
-                    'binary': binary_raw,
-                    'decimal': decimal_raw,
-                    'hexidecimal': hex_raw
-                },
-                'binary_string': bin_str,
-                'bus': self.bus,
-                'ce': self.ce,
-                'reference voltage': self.voltage,
-                'voltage': voltage
-            }
-
-        return data
-
-    def read(self, channel):
-        return self.read_all()[channel]
-
-    def read_voltage(self, channel):
-        data = self.read(channel)['voltage']
-
-        return "%s:%s:%s - %s" % (self.bus, self.ce, channel, data)
-
+    def _byte2bin(self, byte):
+        # Convert HEX Byte to String
+        hex_str = str(byte)
+        # Convert HEX String to Integer
+        raw_int = int(hex_str, 16)
+        # Convert Integer to Binary
+        raw_bin = bin(raw_int)
+        # Pad Binary with 0's and return as an 8 character String
+        # representation
+        return raw_bin[2:].zfill(8)
