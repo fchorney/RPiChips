@@ -20,13 +20,14 @@ TLC0838
                 ANLG SRC/GND -->         CH7 | 8      13 | SE           <-- GND
                          GND -->         COM | 9      12 | REF          <-- 5v5
                          GND -->    DGTL GND | 10     11 | ANLG GND     <-- GND
-                                                 +-----------+
+                                             +-----------+
 ```
 
 ## Examples
 #### SingleChannel.py
 
 This script takes a single argument for the channel you want to convert and display. If no channel is given, channel 0 is desplayed by default.
+Script assumes Bus 0 and CE0 with a voltage reference of 5v.
 
 ```
     ~# ./SingleChannel.py 1
