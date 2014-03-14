@@ -1,18 +1,25 @@
 #!/usr/bin/env python
 
 import time
+from sys import argv
 from RPiChips.TLC0838 import TLC0838
 
 adc = TLC0838(0, 0)
 
+if len(argv) > 1:
+    channel = int(argv[1])
+else:
+    channel = 0
+
+print adc
+
 try:
     while 1:
-        ch0 = adc.read(0)
+        ch = adc.read(channel)
 
-        print ch0.msbf
-        print ch0.lsbf
+        print ch
 
-        time.sleep(2)
+        time.sleep(1)
 except KeyboardInterrupt:
     pass
 

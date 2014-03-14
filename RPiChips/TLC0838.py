@@ -2,35 +2,22 @@ import spidev
 
 class TLC0838Reading():
     def __init__(self, binary_string, vref):
-        self.binary_string = binary_string
+        self.raw_bin = binary_string
         self.vref = vref
+        self.bin = binary_string[9:17]
+        self.int = int(self.bin, 2)
+        self.hex = hex(self.int)
+        self.vcc = (float(self.int) / 255.0 * self.vref)
 
-        # Figure out all the conversions here
-        msbf_bin = self.binary_string[9:17]
-        lsbf_bin = self.binary_string[16:]
-
-        msbf_int = int(msbf_bin, 2)
-        lsbf_int = int(lsbf_bin, 2)
-
-        msbf_hex = hex(msbf_int)
-        lsbf_hex = hex(lsbf_int)
-
-        msbf_vcc = (float(msbf_int) / 255.0 * self.vref)
-        lsbf_vcc = (float(lsbf_int) / 255.0 * self.vref)
-
-        self.msbf = {
-            'bin': msbf_bin,
-            'int': msbf_int,
-            'hex': msbf_hex,
-            'vcc': msbf_vcc
-        }
-
-        self.lsbf = {
-            'bin': lsbf_bin,
-            'int': lsbf_int,
-            'hex': lsbf_hex,
-            'vcc': lsbf_vcc
-        }
+    def __str__(self):
+        args = (
+            self.raw_bin, self.vref,
+            self.bin, self.int, self.hex, self.vcc
+        )
+        return (
+            "TLC0838Reading<raw_bin='%s', vref='%s', bin='%s', " +
+            "int='%s', hex='%s', vcc='%s'>"
+        ) % args
 
 class TLC0838():
     # Single Channel Address
@@ -74,6 +61,12 @@ class TLC0838():
         self.spi = spidev.SpiDev()
         self.spi.open(bus, ce)
 
+    def __str__(self):
+        args = (
+            self.bus, self.ce, self.vref, self.spi
+        )
+        return "TLC0838<bus='%s', ce='%s', vref='%s', spi='%s'>" % args
+
     def close(self):
         self.spi.close()
 
@@ -84,7 +77,7 @@ class TLC0838():
         # Combine response into single binary string
         binary_string = ''
         for byte in resp:
-            binary_string += self._byte2bin(byte)
+            binary_string += bin(byte)[2:].zfill(8)
 
         result = TLC0838Reading(binary_string, self.vref)
         return result
@@ -96,14 +89,3 @@ class TLC0838():
         addr_byte = TLC0838.START_BYTE | addrs[channel]
         # Return instruction, start/channel byte plus 2 padding bytes
         return [addr_byte, TLC0838.PADDING_BYTE, TLC0838.PADDING_BYTE]
-
-    def _byte2bin(self, byte):
-        # Convert HEX Byte to String
-        hex_str = str(byte)
-        # Convert HEX String to Integer
-        raw_int = int(hex_str, 16)
-        # Convert Integer to Binary
-        raw_bin = bin(raw_int)
-        # Pad Binary with 0's and return as an 8 character String
-        # representation
-        return raw_bin[2:].zfill(8)
