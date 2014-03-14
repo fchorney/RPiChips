@@ -1,22 +1,19 @@
 import spidev
 
-class TLC0838Reading():
+class ADCData():
     def __init__(self, binary_string, vref):
-        self.raw_bin = binary_string
-        self.vref = vref
+        self.vref = float(vref)
         self.bin = binary_string[9:17]
         self.int = int(self.bin, 2)
-        self.hex = hex(self.int)
+        self.hex = ("0x%02x" % self.int).upper()
         self.vcc = (float(self.int) / 255.0 * self.vref)
 
     def __str__(self):
         args = (
-            self.raw_bin, self.vref,
-            self.bin, self.int, self.hex, self.vcc
+            self.vref, self.bin, self.int, self.hex, self.vcc
         )
         return (
-            "TLC0838Reading<raw_bin='%s', vref='%s', bin='%s', " +
-            "int='%s', hex='%s', vcc='%s'>"
+            "ADCData<vref='%s', bin='%s', int='%s', hex='%s', vcc='%s'>"
         ) % args
 
 class TLC0838():
@@ -55,7 +52,7 @@ class TLC0838():
     def __init__(self, bus, ce, vref=5.0):
         self.bus = bus
         self.ce = ce
-        self.vref = vref
+        self.vref = float(vref)
 
         # Initialize SPI
         self.spi = spidev.SpiDev()
@@ -79,7 +76,7 @@ class TLC0838():
         for byte in resp:
             binary_string += bin(byte)[2:].zfill(8)
 
-        result = TLC0838Reading(binary_string, self.vref)
+        result = ADCData(binary_string, self.vref)
         return result
 
     def _make_instruction(self, channel, differential=False):

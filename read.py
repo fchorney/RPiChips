@@ -17,9 +17,8 @@ try:
     while 1:
         ch = adc.read(channel)
 
-        print ch
+        print "%s:%s" % (ch.int, ch.vcc)
 
-        time.sleep(1)
 except KeyboardInterrupt:
     pass
 
