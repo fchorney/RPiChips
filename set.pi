@@ -1,0 +1,31 @@
+#!/usr/bin/env python
+
+import time
+from sys import argv
+from RPiChips.MAX532 import MAX532
+
+DAC = MAX532(0, 0)
+
+print DAC
+print DAC.spi
+
+high = DAC.voltage_to_value(10.0)
+low = DAC.voltage_to_value(5.0)
+
+try:
+    while 1:
+        result = DAC.set_output(low, high)
+        print result
+
+        time.sleep(1)
+
+        result = DAC.set_output(high, low)
+        print result
+
+        time.sleep(1)
+
+except KeyboardInterrupt:
+    pass
+
+DAC.set_output(0, 0)
+DAC.close()
