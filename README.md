@@ -3,6 +3,25 @@ RPiChips
 
 Python code for various chips
 
+MAX532
+------
+
+## Chip Diagram
+```
+                                             +-----U-----+
+               Tied to VOUTA -->        RFBA | 1      16 | VDD          <-- +12v
+                 12v or -12v -->       VREFA | 2      15 | LDAC         <-- Digital Ground (3 Wire Interface) / GPIO (4 Wire Interface)
+                Analog Out A -->       VOUTA | 3      14 | CS           <-- CE0
+               Analog Ground -->       AGNDA | 4      13 | DIN          <-- MOSI
+               Analog Ground -->       AGNDB | 5      12 | DOUT         <-- MISO
+                Analog Out B -->       VOUTB | 6      11 | SCLK         <-- SCLK
+                 12v ot -12v -->       VREFB | 7      10 | DGND         <-- Digital Ground
+               Tied to VOUTB -->        RFBB | 8       9 | VSS          <-- -12v
+                                             +-----------+
+```
+
+## Examples
+### Coming Soon...
 
 TLC0838
 -------
